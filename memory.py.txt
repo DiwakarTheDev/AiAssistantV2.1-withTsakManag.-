@@ -1,0 +1,43 @@
+import json
+import os
+from config import MEMORY_FILE
+
+def save_memory(user_id, key, value):
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, 'r') as f:
+            memory = json.load(f)
+    else:
+        memory = {}
+    if user_id not in memory:
+        memory[user_id] = {}
+    memory[user_id][key] = value
+    with open(MEMORY_FILE, 'w') as f:
+        json.dump(memory, f, indent=4)
+
+def load_memory(user_id, key):
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, 'r') as f:
+            memory = json.load(f)
+        return memory.get(user_id, {}).get(key)
+    return None
+
+def save_reminder(user_id, task, date=None):
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, 'r') as f:
+            memory = json.load(f)
+    else:
+        memory = {}
+    if user_id not in memory:
+        memory[user_id] = {}
+    if "reminders" not in memory[user_id]:
+        memory[user_id]["reminders"] = []
+    memory[user_id]["reminders"].append({"task": task, "date": date})
+    with open(MEMORY_FILE, 'w') as f:
+        json.dump(memory, f, indent=4)
+
+def get_reminders(user_id):
+    if os.path.exists(MEMORY_FILE):
+        with open(MEMORY_FILE, 'r') as f:
+            memory = json.load(f)
+        return memory.get(user_id, {}).get("reminders", [])
+    return []

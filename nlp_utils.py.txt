@@ -1,0 +1,40 @@
+from sentence_transformers import SentenceTransformer
+import re
+import wikipedia
+
+embedding_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def get_sentence_embedding(sentence: str):
+    return embedding_model.encode(sentence)
+
+def extract_slots(text):
+    slots = {}
+    date_match = re.search(r"\b(\d{1,2}[/-]\d{1,2}[/-]\d{2,4})\b", text)
+    if date_match:
+        slots["date"] = date_match.group(0)
+    name_match = re.search(r"\b[A-Z][a-z]+\b", text)
+    if name_match:
+        slots["name"] = name_match.group(0)
+    return slots
+
+def extract_reminder_slots(text):
+    slots = {}
+
+    date_pattern = r"\b(on )?(\d{1,2}[/-]\d{1,2}[/-]\d{2,4}|friday|monday|tuesday|wednesday|thursday|saturday|sunday|tomorrow|today)\b"
+    date_match = re.search(date_pattern, text, flags=re.IGNORECASE)
+    if date_match:
+        slots["date"] = date_match.group(2)
+
+    task_pattern = r"(remind me to|remember to|save|add a task|have to) (.+?)( on \d{1,2}| on |$)"
+    task_match = re.search(task_pattern, text, flags=re.IGNORECASE)
+    if task_match:
+        slots["task"] = task_match.group(2).strip()
+
+    return slots
+
+def search_wikipedia(query):
+    try:
+        summary = wikipedia.summary(query, sentences=2)
+        return summary
+    except Exception:
+        return None

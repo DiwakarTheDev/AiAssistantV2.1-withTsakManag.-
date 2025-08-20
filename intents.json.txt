@@ -1,0 +1,46 @@
+{
+  "intents": [
+    {
+      "tag": "greeting",
+      "patterns": ["hello", "hi", "hey", "good morning", "good evening"],
+      "responses": ["Hello!", "Hi there!", "Greetings!"]
+    },
+    {
+      "tag": "save_reminder",
+      "patterns": [
+        "Remind me to call mom on Friday",
+        "Save a meeting on 10/10/2025",
+        "Add a task buy groceries",
+        "I have a meeting tomorrow",
+        "Remember to water the plants"
+      ],
+      "responses": ["Got it, I've saved that reminder."]
+    },
+    {
+      "tag": "get_reminder",
+      "patterns": [
+        "What are my reminders?",
+        "Do I have any tasks?",
+        "Remind me of my meetings",
+        "Show my reminders",
+        "What am I supposed to do?"
+      ],
+      "responses": ["Here are your reminders:"]
+    },
+    {
+      "tag": "save_info",
+      "patterns": ["remember my birthday is 10-12-1995", "my name is John", "save my address as 123 street"],
+      "responses": ["Got it, I have saved that information."]
+    },
+    {
+      "tag": "retrieve_info",
+      "patterns": ["when is my birthday", "what is my name", "where do I live"],
+      "responses": ["Here is what I have saved for you:"]
+    },
+    {
+      "tag": "bye",
+      "patterns": ["bye", "goodbye", "see you later"],
+      "responses": ["Goodbye!", "See you soon!", "Take care!"]
+    }
+  ]
+}

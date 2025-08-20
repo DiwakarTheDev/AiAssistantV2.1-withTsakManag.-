@@ -1,0 +1,105 @@
+import torch
+from model import IntentClassifier
+from nlp_utils import get_sentence_embedding, extract_slots, extract_reminder_slots, search_wikipedia
+from memory import save_memory, load_memory, save_reminder, get_reminders
+from config import *
+import json
+from listen import Listen
+from speak import Say
+
+def load_intents(path):
+    with open(path) as f:
+        data = json.load(f)
+    return data
+
+def predict_intent(model, sentence, intent2idx):
+    emb = get_sentence_embedding(sentence)
+    tensor_emb = torch.tensor(emb, dtype=torch.float32).unsqueeze(0).to(DEVICE)
+    model.eval()
+    with torch.no_grad():
+        out = model(tensor_emb)
+    probs = torch.softmax(out, dim=1)
+    conf, pred = torch.max(probs, dim=1)
+    return pred.item(), conf.item()
+
+def run_chatbot():
+    user_id = "default_user"
+    intents = load_intents(INTENTS_PATH)
+    intent2idx = {intent["tag"]: idx for idx, intent in enumerate(intents["intents"])}
+    idx2intent = {v: k for k, v in intent2idx.items()}
+    
+    model = IntentClassifier(EMBEDDING_DIM, HIDDEN_SIZE, len(intent2idx)).to(DEVICE)
+    model.load_state_dict(torch.load("best_model.pth", map_location=DEVICE))
+    
+    Say("Assistant activated. Say 'quit' to exit.")
+    
+    while True:
+        sentence = Listen()
+        if not sentence or sentence.lower() == "quit":
+            Say("Goodbye!")
+            break
+        
+        intent_idx, confidence = predict_intent(model, sentence, intent2idx)
+        intent_tag = idx2intent[intent_idx]
+
+        if intent_tag == "save_reminder":
+            reminder_slots = extract_reminder_slots(sentence)
+            task = reminder_slots.get("task")
+            date = reminder_slots.get("date")
+            if task:
+                save_reminder(user_id, task, date)
+                Say(f"Got it! I will remind you to {task}" + (f" on {date}" if date else "") + ".")
+            else:
+                Say("Sorry, I couldn't understand the reminder details. Please try again.")
+            continue
+
+        if intent_tag == "get_reminder":
+            reminders = get_reminders(user_id)
+            if reminders:
+                response = "Here are your reminders: "
+                for r in reminders:
+                    if r.get("date"):
+                        response += f"{r['task']} on {r['date']}. "
+                    else:
+                        response += f"{r['task']}. "
+                Say(response)
+            else:
+                Say("You have no saved reminders.")
+            continue
+
+        slots = extract_slots(sentence)
+
+        if intent_tag == "save_info":
+            for key, val in slots.items():
+                save_memory(user_id, key, val)
+            Say("Information saved.")
+            continue
+        
+        if intent_tag == "retrieve_info":
+            responses = []
+            for key in slots.keys():
+                value = load_memory(user_id, key)
+                if value:
+                    responses.append(f"Your {key} is {value}.")
+                else:
+                    responses.append(f"I don't have your {key} saved.")
+            response_text = " ".join(responses) if responses else "I don't have any saved information."
+            Say(response_text)
+            continue
+        
+        if confidence < 0.5:
+            wiki_result = search_wikipedia(sentence)
+            if wiki_result:
+                Say(wiki_result)
+            else:
+                Say("Sorry, I didn't understand. Could you please rephrase?")
+            continue
+        
+        for intent in intents["intents"]:
+            if intent["tag"] == intent_tag:
+                response = intent["responses"][0]
+                Say(response)
+                break
+
+if __name__ == "__main__":
+    run_chatbot()
